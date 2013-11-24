@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
+.focus circle {
+  fill: none;
+  stroke: steelblue;
+}
+
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>
+
+var margin = {top: 20, right: 80, bottom: 30, left: 50},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var parseDate = d3.time.format("%Y%m%d").parse;
+
+var x = d3.scale.linear()
+    .range([width, 0]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var color = d3.scale.ordinal()
+    .range(["#6CA8D6", "#EB7E6F", "#66E4B7"]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var line = d3.svg.line()
+    .interpolate("basis")
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.income); });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var tsv = d3.tsv("data.tsv", function(error, data) {
+    color.domain(d3.keys(data[0]).filter(function(key) { return key !== "date"; }));
+
+    data.forEach(function(d) {
+        d.date = parseInt(d.date);
+    });
+
+var cities = color.domain().map(function(name) {
+    return {
+        name: name,
+        values: data.map(function(d) {
+            return {date: d.date, income: +d[name]};
+        })
+    };
+});
+
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+
+    y.domain([
+        d3.min(cities, function(c) { return d3.min(c.values, function(v) { return v.income; }); }),
+        d3.max(cities, function(c) { return d3.max(c.values, function(v) { return v.income; }); })
+    ]);
+
+    svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Income (€)");
+
+
+    svg.append("rect")
+        .attr("x", width-(width/78)*DayDiff(new Date()))
+        .attr("y", 0)
+        .attr("width", (width/78)*DayDiff(new Date()))
+        .attr("height", height)
+        .attr('opacity', 0.1)
+        .attr("class", "zone-left")
+        .attr("fill", "#000");
+
+
+    var city = svg.selectAll(".city")
+        .data(cities)
+        .enter().append("g")
+        .attr("class", "city");
+
+    city.append("path")
+        .attr("class", "line")
+        .attr("d", function(d) { return line(d.values); })
+        .style("stroke", function(d) { return color(d.name); });
+
+    city.append("text")
+        .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+        .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.income) + ")"; })
+        .attr("x", 3)
+        .attr("dy", ".35em")
+        .text(function(d) { return d.name; });
+
+    var focus = svg.append("g")
+        .attr("class", "focus")
+        .style("display", "none");
+
+    focus.append("rect")
+        .attr("y", -height+4)
+        .attr("width", 2)
+        .attr("height", height)
+        .attr('opacity', 0.3)
+        .attr("fill", "#000");
+
+    var tooltip_width = 90;
+    focus.append("rect")
+        .attr("y", -height+6)
+        .attr("x", -tooltip_width)
+        .attr("width", tooltip_width)
+        .attr("height", 70)
+        .attr("fill", "#000");
+
+    /*
+
+    Part 1.
+
+    Use this logic to show the difference of money with privous editions.
+
+    This to instructions adds text to the black box (mousemove)
+
+    focus.append("text")
+        .attr("id", "bcn2012")
+        .attr("y", -height+25)
+        .attr("x", -tooltip_width+10)
+        .attr("dy", ".35em")
+        .style("fill","#EB7E6F")
+        .style("font-size","20px");
+
+    focus.append("text")
+        .attr("id", "bcn2011")
+        .style("font-size","20px")
+        .attr("y", -height+25+30)
+        .attr("x", -tooltip_width+10)
+        .attr("dy", ".35em")
+        .style("fill","#6CA8D6");
+    */
+
+    //EventListener
+    svg.append("rect")
+        .attr("class", "overlay")
+        .attr("width", width)
+        .attr("height", height)
+        .on("mouseover", function() { focus.style("display", null); })
+        .on("mouseout", function() { focus.style("display", "none"); })
+        .on("mousemove", mousemove);
+
+    function mousemove() {
+        var p = d3.mouse(this)[0]/width;
+        var p1 = Math.round(p*data.length);
+
+
+        var d = x.invert(d3.mouse(this)[0]);
+        focus.attr("transform", "translate(" + (p*width) + "," + y(d3.mouse(this)[1]) + ")");
+        /*
+
+        Part 2.
+
+        Use this logic to show the difference of money with privous editions.
+
+        This instructions is a substraction from the reference (2013) and the other editions (2012, 2011, etc...)
+
+        focus.select("#bcn2012").text(Math.round(data[p1]['2012']-data[p1]['2013']) + ' €');
+        focus.select("#bcn2011").text(Math.round(data[p1]['2011']-data[p1]['2013']) + ' €');
+        */
+    }
+
+});
+
+
+function DayDiff(CurrentDate)
+{
+    var TYear=CurrentDate.getFullYear();
+        //Start comparing on
+        var TDay=new Date("November, 08, 2013");
+        TDay.getFullYear(TYear);
+        var DayCount=(TDay-CurrentDate)/(1000*60*60*24);
+        DayCount=Math.round(DayCount);
+    return(DayCount);
+}
+
+</script>
+
