@@ -23,6 +23,7 @@ If the event has not being held yet, a grey area will cover how many days are le
 
 ## Instructions:
 
+
 #### 1. SETUP
 
 Connect to your eventbrite account and fill the settings.py document with your data:
@@ -38,19 +39,25 @@ https://www.eventbrite.com/myevent?eid=XXXXXXXXXX
 
 events_ids = [000000001, 000000002]
 
+
 #### 2. EXECUTE
 
 ```python compare.py```
 
 This command will generate a data.tsv file with all the retrieved data from eventbrite.
 
+
 #### 3. SHOW RESULTS
 
 Open the index.html on your web browser to compare the results.
 
-###I hope it helps someone!
 
-Find below some images:
+I hope it helps someone!
+
+
+## Other
+
+Some example images:
 
 ![alt tag](https://raw.github.com/xavicolomer/eventbrite_compare/master/README/comparison2.jpg)
 ![alt tag](https://raw.github.com/xavicolomer/eventbrite_compare/master/README/comparison.png)
